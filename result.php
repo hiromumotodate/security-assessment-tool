@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/includes/calculator.php';
 require_once __DIR__ . '/includes/case_matcher.php';
+require_once __DIR__ . '/includes/supabase.php';
 
 $company_name   = htmlspecialchars($_POST['company_name'] ?? '貴社', ENT_QUOTES, 'UTF-8');
 $industry       = $_POST['industry'] ?? 'other';
@@ -38,6 +39,29 @@ $necfru        = estimate_necfru_cost($employees ?: 10);
 // 事例マッチング
 $weak_cats     = get_weak_categories($_POST);
 $related_cases = get_related_cases($industry, $employee_count, $weak_cats, 3);
+
+// Supabase に診断結果を保存（エラーでも画面表示は継続）
+supabase_insert('assessments', [
+    'company_name'     => $_POST['company_name'] ?? '',
+    'contact_name'     => $_POST['contact_name'] ?? '',
+    'industry'         => $industry,
+    'employee_count'   => $employee_count,
+    'employees'        => $employees,
+    'pc_count'         => $pc_count,
+    'has_personal_info'=> $has_personal,
+    'security_score'   => $score,
+    'risk_level'       => $score_result['risk_level'],
+    'risk_label'       => $score_result['risk_label'],
+    'damage_min'       => $damage['min'],
+    'damage_center'    => $damage['center'],
+    'damage_max'       => $damage['max'],
+    'ddhbox_plan_name' => $ddhbox_plan['name'],
+    'ddhbox_monthly'   => $ddhbox_plan['monthly'],
+    'necfru_monthly'   => $necfru['monthly_total'],
+    'answers'          => json_encode($_POST['answers'] ?? []),
+    'category_scores'  => json_encode($score_result['category_scores']),
+    'recommendations'  => json_encode($recs),
+]);
 
 // 費用対効果
 $annual_cost   = $ddhbox_plan['annual'] + $necfru['annual_total'];

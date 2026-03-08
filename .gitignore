@@ -1,3 +1,5 @@
 .DS_Store
 reports/
 *.log
+.env
+.vercel
