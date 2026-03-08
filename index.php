@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>企業セキュリティ診断ツール</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,6 +17,12 @@
             <p>貴社のセキュリティリスクを診断し、想定被害額と対策プランをご提示します</p>
         </header>
 
+        <div class="progress-bar">
+            <div class="step active">1. 企業情報</div>
+            <div class="step">2. セキュリティ診断</div>
+            <div class="step">3. 診断結果</div>
+        </div>
+
         <div class="card">
             <h2>Step 1：企業情報の入力</h2>
             <form action="assessment.php" method="POST">
@@ -21,6 +30,7 @@
                 <div class="form-group">
                     <label for="company_name">企業名 <span class="required">*</span></label>
                     <input type="text" id="company_name" name="company_name" required placeholder="例：株式会社〇〇">
+                    <span class="field-error" id="err_company_name"></span>
                 </div>
 
                 <div class="form-row">
@@ -48,10 +58,12 @@
                     <div class="form-group">
                         <label for="employees">従業員数（人数） <span class="required">*</span></label>
                         <input type="number" id="employees" name="employees" min="1" max="99999" required placeholder="例：50">
+                        <span class="field-error" id="err_employees"></span>
                     </div>
                     <div class="form-group">
                         <label for="pc_count">PC・端末台数 <span class="required">*</span></label>
                         <input type="number" id="pc_count" name="pc_count" min="1" max="99999" required placeholder="例：30">
+                        <span class="field-error" id="err_pc_count"></span>
                         <span class="field-note">DDHBOXのプラン選定に使用します</span>
                     </div>
                 </div>
@@ -79,5 +91,54 @@
             <p>※ 本診断は業界統計データをもとにしたリスク試算です。実際の被害額は環境によって異なります。</p>
         </footer>
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form');
+    var rules = {
+        company_name: { required: true, message: '企業名を入力してください' },
+        employees: { required: true, min: 1, max: 99999, message: '1〜99999の数値を入力してください' },
+        pc_count: { required: true, min: 1, max: 99999, message: '1〜99999の数値を入力してください' }
+    };
+
+    function validate(field) {
+        var rule = rules[field.name];
+        if (!rule) return true;
+        var err = document.getElementById('err_' + field.name);
+        if (!err) return true;
+        var valid = true;
+        if (rule.required && !field.value.trim()) valid = false;
+        if (rule.min !== undefined && Number(field.value) < rule.min) valid = false;
+        if (rule.max !== undefined && Number(field.value) > rule.max) valid = false;
+        if (!valid) {
+            field.classList.add('error');
+            err.textContent = rule.message;
+            err.classList.add('show');
+        } else {
+            field.classList.remove('error');
+            err.classList.remove('show');
+        }
+        return valid;
+    }
+
+    Object.keys(rules).forEach(function(name) {
+        var field = form.querySelector('[name="' + name + '"]');
+        if (field) {
+            field.addEventListener('blur', function() { validate(field); });
+            field.addEventListener('input', function() {
+                if (field.classList.contains('error')) validate(field);
+            });
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        var allValid = true;
+        Object.keys(rules).forEach(function(name) {
+            var field = form.querySelector('[name="' + name + '"]');
+            if (field && !validate(field)) allValid = false;
+        });
+        if (!allValid) e.preventDefault();
+    });
+});
+</script>
 </body>
 </html>
