@@ -186,6 +186,49 @@ if ($cat03_rate < 50 || ($has_personal && $cat04_rate < 70)) {
             <p class="damage-note-small">※ IPA統計・Ponemon Institute調査・個人情報保護委員会ガイドラインをもとに算出した推計値です</p>
         </div>
 
+        <!-- ⑧ 実際の被害事例 -->
+        <?php if (!empty($related_cases)): ?>
+        <div class="card cases-card">
+            <h2>実際の被害事例：同業種・類似企業での事件</h2>
+            <p class="subtitle">貴社と類似した業種・規模・セキュリティ状況の企業で実際に起きた事例です</p>
+            <div class="cases-list">
+                <?php foreach ($related_cases as $case):
+                    $comment = get_comparison_comment($damage['max'], $case);
+                ?>
+                <div class="case-item">
+                    <div class="case-header">
+                        <span class="case-icon"><?= $case['icon'] ?></span>
+                        <div class="case-title-wrap">
+                            <span class="case-year"><?= $case['year'] ?>年</span>
+                            <h3 class="case-title"><?= htmlspecialchars($case['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+                            <span class="case-org"><?= htmlspecialchars($case['org'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                        <div class="case-damage-wrap">
+                            <span class="case-damage-label">実際の被害額</span>
+                            <span class="case-damage-amount"><?= htmlspecialchars($case['damage_label'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                    </div>
+                    <p class="case-description"><?= htmlspecialchars($case['description'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <div class="case-footer">
+                        <div class="case-lesson">
+                            <span class="lesson-label">教訓</span>
+                            <?= htmlspecialchars($case['lesson'], ENT_QUOTES, 'UTF-8') ?>
+                        </div>
+                        <div class="case-comparison">
+                            <span class="comparison-icon">⚠️</span>
+                            <?= htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') ?>
+                        </div>
+                    </div>
+                    <p class="case-source">出典：<?= htmlspecialchars($case['source'], ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="cases-summary">
+                <p>上記事例の共通点：<strong>不正通信の「出口対策」が未整備</strong>だったため、侵入後の情報流出・被害拡大を防げませんでした。</p>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- ④ DDHBOX提案 -->
         <div class="card product-card ddhbox-card urgency-<?= $ddhbox_urgency ?>">
             <div class="product-header">
@@ -314,49 +357,6 @@ if ($cat03_rate < 50 || ($has_personal && $cat04_rate < 70)) {
                     <p><?= htmlspecialchars($rec['text'], ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
                 <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <!-- ⑧ 実際の被害事例 -->
-        <?php if (!empty($related_cases)): ?>
-        <div class="card cases-card">
-            <h2>実際の被害事例：同業種・類似企業での事件</h2>
-            <p class="subtitle">貴社と類似した業種・規模・セキュリティ状況の企業で実際に起きた事例です</p>
-            <div class="cases-list">
-                <?php foreach ($related_cases as $case):
-                    $comment = get_comparison_comment($damage['max'], $case);
-                ?>
-                <div class="case-item">
-                    <div class="case-header">
-                        <span class="case-icon"><?= $case['icon'] ?></span>
-                        <div class="case-title-wrap">
-                            <span class="case-year"><?= $case['year'] ?>年</span>
-                            <h3 class="case-title"><?= htmlspecialchars($case['title'], ENT_QUOTES, 'UTF-8') ?></h3>
-                            <span class="case-org"><?= htmlspecialchars($case['org'], ENT_QUOTES, 'UTF-8') ?></span>
-                        </div>
-                        <div class="case-damage-wrap">
-                            <span class="case-damage-label">実際の被害額</span>
-                            <span class="case-damage-amount"><?= htmlspecialchars($case['damage_label'], ENT_QUOTES, 'UTF-8') ?></span>
-                        </div>
-                    </div>
-                    <p class="case-description"><?= htmlspecialchars($case['description'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <div class="case-footer">
-                        <div class="case-lesson">
-                            <span class="lesson-label">教訓</span>
-                            <?= htmlspecialchars($case['lesson'], ENT_QUOTES, 'UTF-8') ?>
-                        </div>
-                        <div class="case-comparison">
-                            <span class="comparison-icon">⚠️</span>
-                            <?= htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') ?>
-                        </div>
-                    </div>
-                    <p class="case-source">出典：<?= htmlspecialchars($case['source'], ENT_QUOTES, 'UTF-8') ?></p>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <div class="cases-summary">
-                <p>上記事例の共通点：<strong>不正通信の「出口対策」が未整備</strong>だったため、侵入後の情報流出・被害拡大を防げませんでした。</p>
             </div>
         </div>
         <?php endif; ?>
