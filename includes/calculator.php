@@ -1,190 +1,196 @@
 <?php
-
 /**
- * セキュリティスコアと想定被害額を算出するロジック
- * 参考: IPA「情報セキュリティ10大脅威」、総務省統計、Ponemon Institute調査
+ * セキュリティスコア・想定被害額・商材プラン算出ロジック
+ * すべての係数・定義は config.php から参照する
  */
 
+require_once __DIR__ . '/config.php';
+
+/**
+ * セキュリティスコアを算出する
+ * 回答: yes=100% / unknown=50% / no=0%
+ */
 function calculate_security_score(array $answers): array
 {
-    $check_items = [
-        'physical_access',
-        'device_protection',
-        'firewall',
-        'vpn',
-        'wifi_separation',
-        'antivirus',
-        'patch_management',
-        'mfa',
-        'account_management',
-        'backup',
-        'incident_response',
-        'security_training',
-    ];
-
+    $category_scores = [];
     $total_score = 0;
-    $max_score   = count($check_items) * 2;
 
-    foreach ($check_items as $item) {
-        $total_score += intval($answers[$item] ?? 0);
+    foreach (ASSESSMENT_CATEGORIES as $cat_id => $cat) {
+        $questions  = $cat['questions'];
+        $q_count    = count($questions);
+        $obtained   = 0.0;
+
+        foreach (array_keys($questions) as $q_key) {
+            // 新形式（answers[Q01]）と旧形式どちらにも対応
+            $answer = $answers['answers'][$q_key]
+                ?? $answers[$q_key]
+                ?? 'no';
+            if ($answer === 'yes')     $obtained += 1.0;
+            elseif ($answer === 'unknown') $obtained += 0.5;
+        }
+
+        $rate      = $q_count > 0 ? $obtained / $q_count : 0;
+        $cat_score = round($rate * $cat['points']);
+
+        $category_scores[$cat_id] = [
+            'score' => $cat_score,
+            'max'   => $cat['points'],
+            'label' => $cat['label'],
+            'icon'  => $cat['icon'],
+            'rate'  => round($rate * 100),
+        ];
+        $total_score += $cat_score;
     }
 
-    $score_percent = round(($total_score / $max_score) * 100);
+    // 調整係数
+    $has_personal = !empty($answers['has_personal_info']) && $answers['has_personal_info'] !== '0';
+    $employees    = intval($answers['employees'] ?? 0);
+    if ($has_personal)    $total_score = max(0, $total_score - 5);
+    if ($employees >= 500) $total_score = max(0, $total_score - 3);
+    $total_score = min(100, $total_score);
 
-    if ($score_percent >= 80) {
-        $risk_level = 'low';
-        $risk_label = '低リスク';
-    } elseif ($score_percent >= 50) {
-        $risk_level = 'medium';
-        $risk_label = '中リスク';
-    } elseif ($score_percent >= 30) {
-        $risk_level = 'high';
-        $risk_label = '高リスク';
-    } else {
-        $risk_level = 'critical';
-        $risk_label = '危険';
+    // リスクレベル判定
+    $risk_level   = 'critical';
+    $risk_label   = '危険';
+    $risk_color   = '#c62828';
+    $risk_message = '早急な対策が必要です';
+    foreach (RISK_LEVELS as $r) {
+        if ($total_score >= $r['min'] && $total_score <= $r['max']) {
+            $risk_level   = $r['level'];
+            $risk_label   = $r['label'];
+            $risk_color   = $r['color'];
+            $risk_message = $r['message'];
+            break;
+        }
     }
 
     return [
-        'score'         => $score_percent,
-        'total_score'   => $total_score,
-        'max_score'     => $max_score,
-        'risk_level'    => $risk_level,
-        'risk_label'    => $risk_label,
+        'score'           => $total_score,
+        'category_scores' => $category_scores,
+        'risk_level'      => $risk_level,
+        'risk_label'      => $risk_label,
+        'risk_color'      => $risk_color,
+        'risk_message'    => $risk_message,
     ];
 }
 
-
+/**
+ * 想定被害額を算出する（最小・中央・最大レンジ）
+ */
 function calculate_damage(array $post): array
 {
-    $industry          = $post['industry'] ?? 'other';
-    $employee_count    = $post['employee_count'] ?? 'small';
-    $annual_revenue    = intval($post['annual_revenue'] ?? 0);
-    $personal_data_count = $post['personal_data_count'] ?? 'none';
-    $score             = intval($post['security_score'] ?? 50);
+    $industry     = $post['industry'] ?? 'other';
+    $emp_size     = $post['employee_count'] ?? 'small';
+    $score        = intval($post['security_score'] ?? 50);
+    $has_personal = !empty($post['has_personal_info']) && $post['has_personal_info'] !== '0';
 
-    // 業種別リスク係数（金融・医療は高め）
-    $industry_multiplier = [
-        'finance'      => 2.5,
-        'medical'      => 2.2,
-        'retail'       => 1.8,
-        'manufacturing'=> 1.5,
-        'it'           => 1.6,
-        'government'   => 2.0,
-        'education'    => 1.3,
-        'other'        => 1.2,
-    ];
+    $emp_data            = EMPLOYEE_DAMAGE_BASE[$emp_size] ?? EMPLOYEE_DAMAGE_BASE['small'];
+    $base                = $emp_data['base'];
+    $industry_multiplier = INDUSTRY_MULTIPLIERS[$industry] ?? 1.0;
 
-    // 従業員規模別ベース被害額（万円）
-    $base_damage = [
-        'small'      => 1500,
-        'medium'     => 5000,
-        'large'      => 15000,
-        'enterprise' => 50000,
-    ];
-
-    // 個人情報件数による追加被害（1件あたり約500〜1000円の賠償リスク）
-    $personal_data_damage = [
-        'none'   => 0,
-        'small'  => 250,     // 500件×500円
-        'medium' => 3750,    // 7,500件×500円
-        'large'  => 37500,   // 75,000件×500円
-        'xlarge' => 250000,  // 500,000件×500円
-    ];
-
-    $base       = $base_damage[$employee_count] ?? 1500;
-    $multiplier = $industry_multiplier[$industry] ?? 1.2;
-    $pdata      = $personal_data_damage[$personal_data_count] ?? 0;
-
-    // リスクスコアが低いほど被害額を増加（0点=2倍、100点=0.5倍）
-    $risk_factor = 2.0 - ($score / 100) * 1.5;
-
-    $damage_base     = round($base * $multiplier * $risk_factor);
-    $damage_total    = $damage_base + $pdata;
-
-    // 売上高がある場合、売上の一定割合も加算
-    if ($annual_revenue > 0) {
-        $revenue_loss = round($annual_revenue * 10000 * 0.08); // 売上の8%損失想定（万円→円で計算）
-        $revenue_loss_man = round($revenue_loss / 10000);       // 万円に戻す
-        $damage_total += $revenue_loss_man;
+    $score_multiplier = 1.5;
+    foreach (SCORE_DAMAGE_MULTIPLIERS as $sm) {
+        if ($score >= $sm['min'] && $score <= $sm['max']) {
+            $score_multiplier = $sm['multiplier'];
+            break;
+        }
     }
 
-    // 被害シナリオ別内訳
+    $center = round($base * $industry_multiplier * $score_multiplier);
+    $min    = round($center * 0.6);
+    $max    = round($center * 1.6);
+    if ($has_personal) $max += 1000;
+
     $breakdown = [
-        [
-            'label'  => 'ランサムウェア被害（業務停止・復旧費用）',
-            'amount' => round($damage_base * 0.35),
-            'risk'   => get_scenario_risk($score, 'ransomware'),
-        ],
-        [
-            'label'  => '情報漏洩（調査・通知・賠償費用）',
-            'amount' => round(($damage_base * 0.25) + $pdata),
-            'risk'   => get_scenario_risk($score, 'breach'),
-        ],
-        [
-            'label'  => 'フィッシング・不正送金被害',
-            'amount' => round($damage_base * 0.20),
-            'risk'   => get_scenario_risk($score, 'phishing'),
-        ],
-        [
-            'label'  => '業務停止・機会損失',
-            'amount' => round($damage_base * 0.20),
-            'risk'   => get_scenario_risk($score, 'downtime'),
-        ],
+        ['label' => 'ランサムウェア（業務停止・復旧費用）',   'amount' => round($center * 0.35), 'risk' => _srisk($score, 40)],
+        ['label' => '情報漏洩（調査・通知・賠償費用）',       'amount' => round($center * 0.25) + ($has_personal ? 500 : 0), 'risk' => _srisk($score, 45)],
+        ['label' => 'フィッシング・不正送金被害',             'amount' => round($center * 0.20), 'risk' => _srisk($score, 35)],
+        ['label' => '業務停止・機会損失',                    'amount' => round($center * 0.20), 'risk' => _srisk($score, 40)],
     ];
 
     return [
-        'total'     => $damage_total,
-        'base'      => $damage_base,
+        'min'       => $min,
+        'center'    => $center,
+        'max'       => $max,
+        'total'     => $max,   // 後方互換
         'breakdown' => $breakdown,
     ];
 }
 
-
-function get_scenario_risk(int $score, string $scenario): string
+function _srisk(int $score, int $threshold): string
 {
-    $thresholds = [
-        'ransomware' => [70, 40],
-        'breach'     => [75, 45],
-        'phishing'   => [65, 35],
-        'downtime'   => [70, 40],
-    ];
-
-    [$low, $high] = $thresholds[$scenario] ?? [70, 40];
-
-    if ($score >= $low) return 'low';
-    if ($score >= $high) return 'medium';
+    if ($score >= $threshold + 30) return 'low';
+    if ($score >= $threshold)      return 'medium';
     return 'high';
 }
 
+/**
+ * PC台数から最適なDDHBOXプランを選定する
+ */
+function recommend_ddhbox_plan(int $pc_count): array
+{
+    foreach (DDHBOX_PLANS as $plan) {
+        if ($pc_count <= $plan['max_devices']) {
+            return $plan;
+        }
+    }
+    $plans = DDHBOX_PLANS;
+    return end($plans);
+}
 
+/**
+ * necfru MAM/DAMの費用試算を行う
+ */
+function estimate_necfru_cost(int $employees): array
+{
+    $storage_gb   = $employees * NECFRU_PRICE['storage_per_person'];
+    $hot_gb       = round($storage_gb * 0.3);
+    $cold_gb      = $storage_gb - $hot_gb;
+    $storage_cost = round($hot_gb * NECFRU_PRICE['hot_per_gb'] + $cold_gb * NECFRU_PRICE['cold_per_gb']);
+    $monthly      = NECFRU_PRICE['monthly_base'] + $storage_cost;
+
+    return [
+        'monthly_base'  => NECFRU_PRICE['monthly_base'],
+        'storage_gb'    => $storage_gb,
+        'storage_cost'  => $storage_cost,
+        'monthly_total' => $monthly,
+        'annual_total'  => $monthly * 12,
+    ];
+}
+
+/**
+ * 改善推奨事項を生成する
+ */
 function get_recommendations(array $answers): array
 {
     $recs = [];
+    $cats = [];
 
-    if (intval($answers['firewall'] ?? 0) < 2) {
-        $recs[] = ['priority' => 'high', 'text' => 'UTM/次世代ファイアウォールの導入・更新により、外部からの不正アクセスを遮断できます。'];
+    foreach (ASSESSMENT_CATEGORIES as $cat_id => $cat) {
+        $q_count  = count($cat['questions']);
+        $obtained = 0.0;
+        foreach (array_keys($cat['questions']) as $q_key) {
+            $answer = $answers['answers'][$q_key] ?? $answers[$q_key] ?? 'no';
+            if ($answer === 'yes')     $obtained += 1.0;
+            elseif ($answer === 'unknown') $obtained += 0.5;
+        }
+        $cats[$cat_id] = $q_count > 0 ? $obtained / $q_count : 0;
     }
-    if (intval($answers['mfa'] ?? 0) < 2) {
+
+    if (($cats['CAT-01'] ?? 1) < 0.6) {
+        $recs[] = ['priority' => 'high', 'text' => 'UTM/次世代ファイアウォールの導入・更新に加え、C2サーバへの通信遮断（出口対策）が急務です。DDHBOXの導入でネットワークの不正通信を全自動で遮断できます。'];
+    }
+    if (($cats['CAT-04'] ?? 1) < 0.6) {
         $recs[] = ['priority' => 'high', 'text' => '多要素認証（MFA）の導入で、パスワード漏洩時の不正ログインリスクを大幅に低減できます。'];
     }
-    if (intval($answers['antivirus'] ?? 0) < 2) {
+    if (($cats['CAT-02'] ?? 1) < 0.6) {
         $recs[] = ['priority' => 'high', 'text' => 'EDR（エンドポイント検知・対応）ソリューションにより、マルウェア感染を早期検知・封じ込めできます。'];
     }
-    if (intval($answers['backup'] ?? 0) < 2) {
-        $recs[] = ['priority' => 'medium', 'text' => 'オフサイト日次バックアップを整備することで、ランサムウェア被害時の業務継続が可能になります。'];
+    if (($cats['CAT-03'] ?? 1) < 0.6) {
+        $recs[] = ['priority' => 'medium', 'text' => 'オフサイト日次バックアップの整備が急務です。necfru MAM/DAMの導入で安全なクラウド保管・BCP対策が実現できます。'];
     }
-    if (intval($answers['patch_management'] ?? 0) < 2) {
-        $recs[] = ['priority' => 'medium', 'text' => 'パッチ管理ツールの導入で、既知の脆弱性を自動的かつ迅速に修正できます。'];
-    }
-    if (intval($answers['security_training'] ?? 0) < 2) {
+    if (($cats['CAT-05'] ?? 1) < 0.6) {
         $recs[] = ['priority' => 'medium', 'text' => 'セキュリティ教育・フィッシング訓練の定期実施で、人的ミスによるインシデントを削減できます。'];
-    }
-    if (intval($answers['incident_response'] ?? 0) < 2) {
-        $recs[] = ['priority' => 'low', 'text' => 'インシデント対応手順の策定・訓練により、被害発生時の復旧時間（RTO）を短縮できます。'];
-    }
-    if (intval($answers['physical_access'] ?? 0) < 2) {
-        $recs[] = ['priority' => 'low', 'text' => 'ICカードや生体認証による入退室管理で、物理的な不正アクセスを防止できます。'];
     }
 
     return $recs;

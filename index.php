@@ -7,73 +7,65 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<?php require_once __DIR__ . '/includes/config.php'; ?>
     <div class="container">
         <header>
             <h1>企業セキュリティ診断ツール</h1>
-            <p>貴社のセキュリティリスクを診断し、想定被害額をご提示します</p>
+            <p>貴社のセキュリティリスクを診断し、想定被害額と対策プランをご提示します</p>
         </header>
 
         <div class="card">
             <h2>Step 1：企業情報の入力</h2>
             <form action="assessment.php" method="POST">
+
                 <div class="form-group">
                     <label for="company_name">企業名 <span class="required">*</span></label>
                     <input type="text" id="company_name" name="company_name" required placeholder="例：株式会社〇〇">
                 </div>
 
-                <div class="form-group">
-                    <label for="industry">業種 <span class="required">*</span></label>
-                    <select id="industry" name="industry" required>
-                        <option value="">選択してください</option>
-                        <option value="finance">金融・保険</option>
-                        <option value="medical">医療・ヘルスケア</option>
-                        <option value="retail">小売・EC</option>
-                        <option value="manufacturing">製造業</option>
-                        <option value="it">IT・通信</option>
-                        <option value="government">官公庁・自治体</option>
-                        <option value="education">教育</option>
-                        <option value="other">その他</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="industry">業種 <span class="required">*</span></label>
+                        <select id="industry" name="industry" required>
+                            <option value="">選択してください</option>
+                            <?php foreach (INDUSTRY_LABELS as $code => $label): ?>
+                            <option value="<?= $code ?>"><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="employee_count">従業員数区分 <span class="required">*</span></label>
+                        <select id="employee_count" name="employee_count" required>
+                            <option value="">選択してください</option>
+                            <?php foreach (EMPLOYEE_DAMAGE_BASE as $code => $data): ?>
+                            <option value="<?= $code ?>"><?= $data['label'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employees">従業員数（人数） <span class="required">*</span></label>
+                        <input type="number" id="employees" name="employees" min="1" max="99999" required placeholder="例：50">
+                    </div>
+                    <div class="form-group">
+                        <label for="pc_count">PC・端末台数 <span class="required">*</span></label>
+                        <input type="number" id="pc_count" name="pc_count" min="1" max="99999" required placeholder="例：30">
+                        <span class="field-note">DDHBOXのプラン選定に使用します</span>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="employee_count">従業員数 <span class="required">*</span></label>
-                    <select id="employee_count" name="employee_count" required>
-                        <option value="">選択してください</option>
-                        <option value="small">1〜50名</option>
-                        <option value="medium">51〜300名</option>
-                        <option value="large">301〜1000名</option>
-                        <option value="enterprise">1001名以上</option>
-                    </select>
+                    <label>個人情報の取り扱い <span class="required">*</span></label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="has_personal_info" value="1" required> 取り扱っている（顧客・従業員情報等）</label>
+                        <label><input type="radio" name="has_personal_info" value="0"> 取り扱っていない</label>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="annual_revenue">年間売上高（概算）</label>
-                    <select id="annual_revenue" name="annual_revenue">
-                        <option value="">選択してください</option>
-                        <option value="1">1億円未満</option>
-                        <option value="5">1〜5億円</option>
-                        <option value="10">5〜10億円</option>
-                        <option value="50">10〜50億円</option>
-                        <option value="100">50〜100億円</option>
-                        <option value="500">100億円以上</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="personal_data_count">保有する個人情報件数（概算）</label>
-                    <select id="personal_data_count" name="personal_data_count">
-                        <option value="">選択してください</option>
-                        <option value="none">保有していない</option>
-                        <option value="small">1〜1,000件</option>
-                        <option value="medium">1,001〜10,000件</option>
-                        <option value="large">10,001〜100,000件</option>
-                        <option value="xlarge">100,001件以上</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="contact_name">担当者名</label>
+                    <label for="contact_name">担当者名（任意）</label>
                     <input type="text" id="contact_name" name="contact_name" placeholder="例：山田 太郎">
                 </div>
 
