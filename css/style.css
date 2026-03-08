@@ -321,6 +321,130 @@ footer {
     color: #90a4ae;
 }
 
+/* === Cases Card === */
+.cases-card { border-top: 4px solid #37474f; }
+.cases-card h2 { color: #1a237e; }
+
+.cases-list { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+
+.case-item {
+    background: #fafafa;
+    border: 1px solid #eceff1;
+    border-left: 5px solid #e53935;
+    border-radius: 8px;
+    padding: 16px 18px;
+}
+
+.case-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.case-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+
+.case-title-wrap { flex: 1; }
+
+.case-year {
+    font-size: 0.75rem;
+    color: #fff;
+    background: #546e7a;
+    padding: 1px 7px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.case-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a237e;
+    margin: 2px 0 3px;
+}
+
+.case-org {
+    font-size: 0.8rem;
+    color: #78909c;
+    display: block;
+}
+
+.case-damage-wrap {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.case-damage-label {
+    display: block;
+    font-size: 0.72rem;
+    color: #78909c;
+    margin-bottom: 2px;
+}
+
+.case-damage-amount {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #c62828;
+    white-space: nowrap;
+}
+
+.case-description {
+    font-size: 0.88rem;
+    color: #37474f;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.case-footer { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+
+.case-lesson {
+    font-size: 0.85rem;
+    color: #37474f;
+    background: #e8f5e9;
+    border-left: 3px solid #388e3c;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+}
+
+.lesson-label {
+    font-weight: 700;
+    color: #2e7d32;
+    margin-right: 6px;
+}
+
+.case-comparison {
+    font-size: 0.85rem;
+    color: #7b3f00;
+    background: #fff3e0;
+    border-left: 3px solid #f57c00;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.comparison-icon { flex-shrink: 0; }
+
+.case-source {
+    font-size: 0.72rem;
+    color: #90a4ae;
+    margin: 0;
+}
+
+.cases-summary {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #1a237e;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.cases-summary strong { color: #ffcc80; }
+
 /* === Print === */
 @media print {
     body { background: #fff; }
